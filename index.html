@@ -1,3 +1,553 @@
-<html>
-hello world
+<!doctype html>
+<html lang="en">
+
+    <head>
+		<meta charset="utf-8">
+		
+		<title>Informatics Display</title>
+
+		<meta name="description" content="A framework for easily creating beautiful presentations using HTML">
+		<meta name="author" content="Hakim El Hattab">
+
+		<meta name="apple-mobile-web-app-capable" content="yes" />
+		<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+		<link rel="stylesheet" href="https://rawgithub.com/hakimel/reveal.js/master/reveal/css/reveal.min.css">
+		<link rel="stylesheet" href="https://rawgithub.com/hakimel/reveal.js/master/reveal/css/theme/default.css" id="theme">
+
+		<!-- For syntax highlighting -->
+		<link rel="stylesheet" href="https://rawgithub.com/hakimel/reveal.js/master/reveal/lib/css/zenburn.css">
+
+		<!-- If the query includes 'print-pdf', use the PDF print sheet -->
+		<script>
+			document.write( '<link rel="stylesheet" href="css/print/' + ( window.location.search.match( /print-pdf/gi ) ? 'pdf' : 'paper' ) + '.css" type="text/css" media="print">' );
+		</script>
+		
+		<style type="text/css">
+		   .display .table {
+			   font-family: Arial, Helvetica, sans-serif
+			   display:table;
+			   table-layout:fixed;
+		   }
+		   .display .header {
+			   display:table-header-group;
+		   }
+		   .display .row {
+			   display:table-row;
+		   }
+		   .display .rowGroup {
+			   display:table-row-group;
+		   }
+		   .display .cell {
+			   display:table-cell;
+		   }
+		   .display .cell.header {
+			text-align: center;
+			width:100%;
+			min-width: 900px;
+			   font-size: 1.3em;
+			   color: #ffff00;
+		   }
+		   .display .cell.label {
+			text-align: left;
+			float: left;
+			width:25%;
+			   color: #00ff00;
+		   }
+		   .display .cell.value1 {
+			text-align: left;
+			float: right;
+			width:75%;
+			   color: #ffffff;
+		   }
+		   .display .cell.value2 {
+			text-align: left;
+			float: right;
+			width:75%;
+			font-size: .6em;
+			   color: #ffffff;
+		   }
+		   .display .spacer {
+			padding-top: 20px;
+		   }
+		   .display .clrall {
+			clear: both;
+		   }
+		</style>
+
+<!--		<script src="config.js"></script>  -->
+
+		<script>
+			setTimeout('window.location.href=window.location.href;', (6*60*60)*1000);
+		</script>
+		
+		<script type="text/javascript">
+		
+			function auth() {
+				var config = {
+					'client_id':'62084015138',
+					'scope':'https://www.googleapis.com/auth/calendar'
+					};
+				gapi.auth.authorize(config, function() {
+					console.log('login complete');
+					console.log(gapi.auth.getToken());
+				});
+			}
+	
+		</script>
+
+		<!--[if lt IE 9]>
+		<script src="lib/js/html5shiv.js"></script>
+		<![endif]-->
+	</head>
+
+	<body>
+
+		<div class="reveal">
+
+			<!-- Any section element inside of this container is displayed as a slide -->
+			<div class="slides">
+			
+
+
+			</div>
+
+		</div>
+
+				<button id="authorize-button" style="visibility: hidden">Authorize</button>
+
+		<script type="text/javascript">
+
+			var clientId = '448155630502';
+			
+			var apiKey = 'AIzaSyBr5n0aNeV5TpuqbNFqhQNpCAqZTRdgYFI';
+			
+			var scopes = 'https://www.googleapis.com/auth/calendar';
+			
+			function handleClientLoad() {
+				gapi.client.setApiKey(apiKey);
+				window.setTimeout(checkAuth, 1);
+				console.log("handle client");
+			}
+
+			function checkAuth() {
+				gapi.auth.authorize({client_id: clientId, scope: scopes, immediate: true}, handleAuthResult);
+				console.log("check auth");
+			}
+			
+			function handleAuthResult(authResult) {
+				var authorizeButton = document.getElementById('authorize-button');
+				if (authResult && !authResult.error) {
+					authorizeButton.style.visibility = 'hidden';
+					makeApiCall();
+				} else {
+					authorizeButton.style.visibility = '';
+					authorizeButton.onclick = handleAuthClick;
+				}
+				console.log("hand auth result");
+			}
+			
+			function handleAuthClick(event) {
+				console.log("handle auth click");
+				gapi.auth.authorize({client_id: clientId, scope: scopes, immediate: false}, handleAuthResult);
+				return false;
+			}
+			
+			function makeApiCall() {
+			
+				var timeMin = getMin();
+				var max = getMax();
+				
+				gapi.client.load('calendar', 'v3', function() {
+					var request = gapi.client.calendar.events.list({
+						'calendarId': 'informatics@mathbiol.org',
+						'timeMax': getMax(),
+						'timeMin': getMin(),
+					});
+					console.log("time right now: " + getMin());
+					console.log("show events up until " + getMax());
+					console.log("about to execute");
+					request.execute( function(resp) {
+						var items = resp.items;
+						items.sort(function(a,b) {
+							return (a.start.dateTime < b.start.dateTime) ? -1 : (a.start.dateTime > b.start.dateTime) ? 1 : 0;						
+						});
+						
+						var index = document.getElementsByClassName("slides")[0];
+						var containsEvents = false;
+						for(var i = 0; i < items.length; i++){
+							console.log("event " + (i + 1) + ": " + items[i].summary.slice(5));
+							if(items[i].summary.indexOf("[IFX]") > -1) {
+								containsEvents = true;
+								index.appendChild(parseEvent(items[i]));
+							}
+						}
+						if(!containsEvents) {
+							index.appendChild(emptySlide());
+						}
+						console.log('it worked');
+					});
+				});
+			}
+			
+			function parseEvent(event) {
+
+				var newSection = document.createElement("section"); newSection.className = "display";
+				var table = document.createElement("div"); table.className = "table";
+				
+				var header = document.createElement("div"); header.className = "header";
+				var cellHeader = document.createElement("div"); cellHeader.className = "cell header";
+
+				// title
+				cellHeader.innerHTML = event.summary.slice("[IFX] ".length, event.summary.length);
+				header.appendChild(cellHeader);
+				table.appendChild(header);
+
+				// spacer element
+				var rowGroup1 = document.createElement("div"); rowGroup1.className = "rowGroup";
+				var spacer1 = document.createElement("div"); spacer1.className = "spacer";
+				rowGroup1.appendChild(spacer1);
+				table.appendChild(rowGroup1);
+
+				var des = event.description;
+				
+				// description- speaker and affiliation
+				if(des) {
+				
+					if(des.indexOf("[speaker]") > -1) {
+						var speaker;
+						if(des.indexOf("\n") > -1){
+							speaker = des.slice(des.indexOf("[speaker]") + 9, des.indexOf("\n"));
+							des = des.slice(des.indexOf("\n") + 1, des.length);
+						} else {
+							speaker = des.slice(des.indexOf("[speaker]") + 9, des.length);
+						}
+						
+						var rowGroup2 = document.createElement("div"); rowGroup2.className = "rowGroup";
+						var row2 = document.createElement("div"); row2.className = "row";
+						var cellLabel = document.createElement("div"); cellLabel.className = "cell label";
+						var cellValue1 = document.createElement("div"); cellValue1.className = "cell value1";
+						
+						cellLabel.innerHTML = "Speaker:";
+						cellValue1.innerHTML = speaker;
+						
+						row2.appendChild(cellLabel);
+						row2.appendChild(cellValue1);
+						rowGroup2.appendChild(row2);
+						table.appendChild(rowGroup2);
+						
+						while(des.indexOf("[affil]") > -1) {
+												
+							var affil = "";
+							
+							if(des.indexOf("\n") > -1) {
+								affil += des.slice(des.indexOf("[affil]") + 7, des.indexOf("\n"));
+								des = des.slice(des.indexOf("\n") + 1, des.length);
+							} else {
+								affil += des.slice(des.indexOf("[affil]") + 7, des.length);
+							}
+							
+							var rowGroup3 = document.createElement("div"); rowGroup3.className = "rowGroup";
+							var row3 = document.createElement("div"); row3.className = "row";
+							var cellValue3 = document.createElement("div"); cellValue3.className = "cell value2";
+
+							cellValue3.innerHTML = affil;
+							
+							row3.appendChild(cellValue3);
+							rowGroup3.appendChild(row3);
+							table.appendChild(rowGroup3);
+							
+						}
+						
+					}
+				
+				}
+				
+				// spacer element
+				var rowGroup4 = document.createElement("div"); rowGroup4.className = "rowGroup";
+				var spacer4 = document.createElement("div"); spacer4.className = "spacer";
+				rowGroup4.appendChild(spacer4);
+				table.appendChild(rowGroup4);
+				
+				// location
+				if(event.location){
+					var rowGroup5 = document.createElement("div"); rowGroup5.className = "rowGroup";
+					var row5 = document.createElement("div"); row5.className = "row";
+					var cellLabel5 = document.createElement("div"); cellLabel5.className = "cell label";
+					var cellValue5 = document.createElement("div"); cellValue5.className = "cell value1";
+
+					cellLabel5.innerHTML = "Where:";
+					cellValue5.innerHTML = event.location;
+
+					row5.appendChild(cellLabel5);
+					row5.appendChild(cellValue5);
+					rowGroup5.appendChild(row5);
+					table.appendChild(rowGroup5);
+				}
+				
+				// spacer element
+				var rowGroup6 = document.createElement("div"); rowGroup6.className = "rowGroup";
+				var spacer6 = document.createElement("div"); spacer6.className = "spacer";
+				rowGroup6.appendChild(spacer6);
+				table.appendChild(rowGroup6);
+				
+				// date
+				var rowGroup7 = document.createElement("div"); rowGroup7.className = "rowGroup";
+				var row7 = document.createElement("div"); row7.className = "row";
+				var cellLabel7 = document.createElement("div"); cellLabel7.className = "cell label";
+				var cellValue7 = document.createElement("div"); cellValue7.className = "cell value1";
+
+				cellLabel7.innerHTML = "Date:";
+				cellValue7.innerHTML = parseDate(event.start.dateTime);
+				
+				row7.appendChild(cellLabel7);
+				row7.appendChild(cellValue7);
+				rowGroup7.appendChild(row7);
+				table.appendChild(rowGroup7);
+				
+				// spacer element
+				var rowGroup8 = document.createElement("div"); rowGroup8.className = "rowGroup";
+				var spacer8 = document.createElement("div"); spacer8.className = "spacer";
+				rowGroup8.appendChild(spacer8);
+				table.appendChild(rowGroup8);
+				
+				// duration
+				var rowGroup9 = document.createElement("div"); rowGroup9.className = "rowGroup";
+				var row9 = document.createElement("div"); row9.className = "row";
+				var cellLabel9 = document.createElement("div"); cellLabel9.className = "cell label";
+				var cellValue9 = document.createElement("div"); cellValue9.className = "cell value1";
+				
+				var start = event.start.dateTime.slice(11,16);
+				if(start.slice(0,1) == "0")
+					start = start.slice(1,start.length);
+				var end = event.end.dateTime.slice(11,16);
+				if(end.slice(0,1) == "0")
+					end = end.slice(1,end.length);
+				var interval = start + " - " + end;
+				
+				cellLabel9.innerHTML = "Time:";
+				cellValue9.innerHTML = interval;
+				row9.appendChild(cellLabel9);
+				row9.appendChild(cellValue9);
+				rowGroup9.appendChild(row9);
+				table.appendChild(rowGroup9);
+
+				// spacer element
+				var rowGroup10 = document.createElement("div"); rowGroup10.className = "rowGroup";
+				var spacer10 = document.createElement("div"); spacer10.className = "spacer";
+				rowGroup10.appendChild(spacer10);
+				table.appendChild(rowGroup10);
+
+				// more
+				if(des && des.indexOf("[more]") > -1) {
+					var rowGroup11 = document.createElement("div"); rowGroup11.className = "rowGroup";
+					var row11 = document.createElement("div"); row11.className = "row";
+					var cellLabel11 = document.createElement("div"); cellLabel11.className = "cell label";
+					var cellValue11 = document.createElement("div"); cellValue11.className = "cell value1";
+				
+					var extra = des.slice(des.indexOf("[more]") + 6, des.length);
+					
+					cellLabel11.innerHTML = "More:";
+					cellValue11.innerHTML = extra;
+					
+					row11.appendChild(cellLabel11);
+					row11.appendChild(cellValue11);
+					rowGroup11.appendChild(row11);
+					table.appendChild(rowGroup11);
+				}
+				
+				newSection.appendChild(table);
+				return newSection;
+			}
+
+			function emptySlide() {
+				var newSection = document.createElement("section");
+				var header = document.createElement("h1");
+				header.innerHTML = "No Informatics Events Between Now and " + parseDate(getMax());
+				newSection.appendChild(header);
+				return newSection;
+			}
+			
+			function parseDate(dateTime) {
+
+				var finalDate = "";
+				
+				var date = dateTime.slice(0,10);
+				
+				var months = ["January", "February", "March", "April", "May", "June", "July",
+						"August", "September", "October", "November", "December"];
+				
+				var monthIndex = parseInt(date.slice(5,7));
+				
+				finalDate += months[monthIndex - 1];
+
+				finalDate += " ";
+				
+				var day = parseInt(date.slice(8,10));
+
+				finalDate += day;
+				
+				finalDate += ", ";
+				
+				finalDate += parseInt(date.slice(0,4));
+				
+				return finalDate;
+			}
+			
+			function getMin() {
+
+				var d = new Date();
+			
+				var min = d.getFullYear() + "-";
+
+				if(d.getMonth() + 1 < 10)
+					min += ("0" + (d.getMonth() + 1));
+				else
+					min += (d.getMonth() + 1);
+
+				min += "-";
+
+				if(d.getDate() < 10)
+					min += ("0" + d.getDate());
+				else
+					min += d.getDate();
+					
+				min += "T";
+
+				if(d.getHours() < 10)
+					min += ("0" + d.getHours());
+				else
+					min += d.getHours();
+
+				min += ":";
+
+				if(d.getMinutes() < 10)
+					min += ("0" + d.getMinutes());
+				else
+					min += d.getMinutes();
+				
+				min += ":";
+
+				if(d.getSeconds() < 10)
+					min += ("0" + d.getSeconds());
+				else
+					min += d.getSeconds();
+				
+				min += "-05:00";
+				
+				return min;
+			}
+			
+			function getMax() {
+
+				var d = new Date(Date.now() + (12*24*60*60*1000));
+				
+				var max = d.getFullYear() + "-";
+
+				if(d.getMonth() + 1 < 10)
+					max += ("0" + (d.getMonth() + 1));
+				else
+					max += (d.getMonth() + 1);
+
+				max += "-";
+
+				if(d.getDate() < 10)
+					max += ("0" + d.getDate());
+				else
+					max += d.getDate();
+					
+				max += "T";
+
+				if(d.getHours() < 10)
+					max += ("0" + d.getHours());
+				else
+					max += d.getHours();
+
+				max += ":";
+
+				if(d.getMinutes() < 10)
+					max += ("0" + d.getMinutes());
+				else
+					max += d.getMinutes();
+				
+				max += ":";
+
+				if(d.getSeconds() < 10)
+					max += ("0" + d.getSeconds());
+				else
+					max += d.getSeconds();
+				
+				max += "-05:00";
+				
+				return max;
+			
+/*
+				var max = "";
+			
+				var min = getMin();
+
+				var months = [31,28,31,30,31,30,31,31,30,31,30,31];
+				
+				var monthIndex = parseInt(min.slice(5,7));
+				
+				if(parseInt(min.slice(8,10)) < months[monthIndex-1] - 11) {
+
+					if(parseInt(min.slice(5,7) < 12) {
+					
+						max += min.slice(0,5);
+						var offset = 12 - (months[monthIndex-1] - parseInt(min.slice(8,10)));
+						
+						max += min.slice(10, min.length);
+						
+					
+					} else {
+					
+						max += (parseInt(min.slice(0,4)) + 1);
+						max += "-";
+						var offset = 12 - (months[monthIndex-1] - parseInt(min.slice(8,10)));
+						max += min.slice(10, min.length);
+					
+					}
+					
+
+				} else {
+				
+					var max = min.slice(0,8);
+					max += (parseInt(min.slice(8,10)) + 12);
+					max += min.slice(10, min.length);
+					
+				}
+			
+				return max;
+*/
+			}
+			
+		</script>
+		
+		<script src="https://apis.google.com/js/client.js?onload=handleClientLoad"></script>
+		
+		<script src="https://rawgithub.com/hakimel/reveal.js/master/reveal/lib/js/head.min.js"></script>
+		<script src="https://rawgithub.com/hakimel/reveal.js/master/reveal/js/reveal.min.js"></script>
+
+		<script>
+
+			// Full list of configuration options available here:
+			// https://github.com/hakimel/reveal.js#configuration
+			Reveal.initialize({
+				controls: false,
+				progress: false,
+				center: true,
+				loop: true,
+				autoSlide: (10)*1000,
+
+				theme: Reveal.getQueryHash().theme, // available themes are in /css/theme
+				transition: Reveal.getQueryHash().transition || 'page', // default/cube/page/concave/zoom/linear/fade/none
+
+			});
+
+		</script>		
+		
+	</body>
 </html>
